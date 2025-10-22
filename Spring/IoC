@@ -1,0 +1,2036 @@
+What is IoC(Inversion of Control)?
+It is a design principle in which the control of object creation and dependency management is inverted from the programmer to a container(Spring Framework)
+
+In normal Java,
+Car car = new Car()
+
+You manully create the object (Car)
+
+In Spring IoC
+Car car = context.getBean(“car”);
+Spring creates and manages the object , you just ask for it
+So the control of the object creation is inverted to the Spring IoC container, you just ask for it
+
+What is the IoC container?
+The IoC container is the core of the Spring Framework- it manages the complete liufecycle of beans
+
+-	Creating objects (beans)
+-	Wiring dependencies
+-	Copnfiguring them (via XML, annotations or Java config)
+-	Managing their lifecycle (via init, destroy)
+
+Think of it as a brain, that knows how to build, connect and manage your objects
+
+There are two main IoC  containers in Spring
+
+BeanFactory (the basic IoC container)
+
+It is the simplest container that provides basic support for dependency inkection and bean lifecycle
+
+-	Key Points (it lazily holds beans)
+-	Lightweight- good for resource constraint environments
+-	Interface org.springframewwork.beans.factory.BeanFactory
+-	XML-based configuration is loaded using XmlBeanFactory (deprecated but useful for concept).
+Example:
+import org.springframework.beans.factory.BeanFactory;
+import org.springframework.beans.factory.xml.XmlBeanFactory;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
+
+public class Test {
+    public static void main(String[] args) {
+        Resource resource = new ClassPathResource("applicationContext.xml");
+        BeanFactory factory = new XmlBeanFactory(resource);
+
+        Car car = (Car) factory.getBean("car");
+        car.drive();
+    }
+}
+
+applicationContext.xml:
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="
+          http://www.springframework.org/schema/beans
+          http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <bean id="car" class="com.example.Car"/>
+</beans>
+
+Application Context (The advanced IoC container)
+It is a superset of BeanFactory
+It adds more enterprise-level features, including
+-	Eager loading of beans on startup
+-	Internationalisation(18n) support
+-	Event Publication/listening
+-	Bean post-processing and lifecycle callbacks
+-	Annotation-based configuration
+-	Integration with Spring AOP and other frameworks
+Common Implementations:
+•	ClassPathXmlApplicationContext → loads from classpath
+•	FileSystemXmlApplicationContext → loads from file system
+•	AnnotationConfigApplicationContext → for @Configuration and annotation-based setup
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
+
+public class Test {
+    public static void main(String[] args) {
+        ApplicationContext context = new ClassPathXmlApplicationContext("applicationContext.xml");
+        Car car = (Car) context.getBean("car");
+        car.drive();
+    }
+}
+
+Bean Lifecycle-
+1.	Instatntiation- spring creates the object
+2.	Populate properties- dependencies are injected
+3.	•  BeanNameAware / BeanFactoryAware callbacks (if implemented)
+4.	•  Before initialization → post-processors run.
+5.	•  Custom init method (init-method or @PostConstruct)
+6.	•  Bean is ready for use.
+7.	•  On container shutdown → destroy callbacks (destroy-method or @PreDestroy).
+
+
+🧱 6. Difference between BeanFactory and ApplicationContext
+Feature	BeanFactory	ApplicationContext
+Bean Loading	Lazy (on demand)	Eager (on startup)
+Configuration	Basic DI support	Advanced features (AOP, events, i18n)
+Performance	Lightweight	Slightly heavier
+Recommended for	Simple, lightweight apps	Enterprise applications
+Annotation Support	Limited	Full support
+
+
+What is a Resource?
+Resource resource = new ClassPathResource("applicationContext.xml");
+
+What is a resource?
+Resource is an interface in spring (org.springframework.core.io.Resource)
+
+It represents any kind of external resource
+-	A file on disk
+-	A claspath file(inside your src/main/resoruces)
+-	A URL
+-	Or even something from the servlet contextervlet context
+-	So it’s a generic handle for loading files, not just XML.
+-	Spring uses this abstraction so it can load configs from anywhere — classpath, filesystem, or URL — without you changing code.
+-	2️⃣ What is ClassPathResource?
+-	ClassPathResource is an implementation of that Resource interface.
+It tells Spring:
+-	“Load this file from the classpath.”
+-	So when you write:
+-	3️⃣ Why do we pass it to XmlBeanFactory?
+-	Because XmlBeanFactory needs to read the bean definitions (XML config) from somewhere.
+-	So:
+BeanFactory factory = new XmlBeanFactory(resource);
+
+means:
+1.	Take this XML file (represented by resource).
+2.	Parse it.
+3.	Create and manage the beans defined inside.
+________________________________________
+4️⃣ Where does this file usually live?
+If you’re using Eclipse / IntelliJ / Maven / Gradle:
+src/main/resources/applicationContext.xml    	
+
+When the project runs, this folder gets added to the classpath — so ClassPathResource can find it automatically.
+________________________________________
+5️⃣ In simple terms:
+Code	Meaning
+Resource	Generic file handle (abstract representation of a file)
+ClassPathResource	“File inside classpath” type of Resource
+"applicationContext.xml"	The Spring configuration XML (beans definition)
+XmlBeanFactory(resource)	Parses that file and builds IoC container (bean objects)
+🧩 Example visual:
+📁 src/main/resources/applicationContext.xml
+<beans>
+   <bean id="car" class="com.example.Car"/>
+</beans>
+
+📄 Test.java
+Resource res = new ClassPathResource("applicationContext.xml");
+BeanFactory factory = new XmlBeanFactory(res);
+Car c = (Car) factory.getBean("car");
+c.drive();
+
+
+Short summary:
+Term	Meaning
+Resource	Interface for external file loading
+ClassPathResource	Load from Java classpath
+applicationContext.xml	Spring config file containing bean definitions
+XmlBeanFactory(resource)	Builds IoC container using that file
+
+
+What is ClassPath?
+The ClassPath is basically the placxe where Java looks for classes and resources
+When your program runs
+Think of it like Java’s “search path” – a list of folders and JARs that Java uses to find .class files and other resources(like XML, properties etc)
+
+
+⚙️ 2. Example: Where is the classpath?
+If you’re using a normal Java project:
+src/
+  main/
+    java/   → your .java files (become .class files in target/classes)
+    resources/ → your XML, properties, etc.
+
+When you compile/run your app:
+•	src/main/resources/ and target/classes/ are automatically added to the classpath.
+So if you put applicationContext.xml inside src/main/resources/,
+then Java can find it in the classpath.
+So if you put applicationContext.xml inside src/main/resources/,
+then Java can find it in the classpath.
+
+💽 3. File System vs Classpath
+Feature	File System Path	Classpath Resource
+Where it lives	Anywhere on your computer (e.g. C:\Users\arman\Desktop\file.xml)	Inside your project or inside a JAR’s /resources/ folder
+How it’s accessed	With File or FileSystemResource	With ClassPathResource
+When to use	For external configuration files (outside the project)	For files bundled inside your app (resources, XML configs, etc.)
+Portable?	❌ No (depends on your system path)	✅ Yes (travels with the app)
+
+
+
+🧠 Why use classpath resources?
+Because classpath files get packaged inside your JAR or WAR when you deploy the app.
+So when you ship your Spring app, the XML/config file stays inside the app — not lost on some C: drive.
+This makes your app portable, self-contained, and deployment-friendly.
+________________________________________
+⚡ 4. In short
+Term	Meaning
+Classpath	List of locations where Java searches for .class and resource files
+File system	Actual folder structure on your OS
+ClassPathResource	Loads files bundled with your app (in /resources/)
+FileSystemResource	Loads files from disk (outside the app)
+
+
+Dependency Injection-
+It means instead of class creating its own dependencies, the Spring container provides(injects) them for you
+
+💭 Example without DI (old school Java)
+class Engine {
+    void start() {
+        System.out.println("Engine started!");
+    }
+}
+
+class Car {
+    private Engine engine = new Engine();  // ❌ Hard dependency
+
+    void drive() {
+        engine.start();
+        System.out.println("Car is moving...");
+    }
+}
+Problem:
+•	The Car class is tightly coupled to Engine.
+•	If we want a different engine (ElectricEngine), we must modify the Car class code.
+→ Not flexible, not testable.
+ ✅ Example with Dependency Injection
+class Engine {
+    void start() {
+        System.out.println("Engine started!");
+    }
+}
+
+class Car {
+    private Engine engine;
+
+    // Constructor injection
+    Car(Engine engine) {
+        this.engine = engine;
+    }
+
+    void drive() {
+        engine.start();
+        System.out.println("Car is moving...");
+    }
+}
+
+How Spring does DI?
+Spring can inject dependencies in three ways
+Type	Example	Preferred?
+Constructor Injection	via constructor	✅ Recommended
+Setter Injection	via setter methods	Common
+Field Injection	via @Autowired on fields	Convenient, but ❌ not best for large apps
+
+
+4.	Example – XML Based DI
+Beans Definition (applicationContext.xml)
+<beans>
+<bean id = “engine” class = “com.example.Engine/>
+<bean id = “car” class = “com.example.Car”>
+<constructor-arg ref="engine"/>
+</bean>
+</beans>
+
+Java Classes-
+public class Engine {
+    public void start() {
+        System.out.println("Engine started!");
+    }
+}
+
+public class Car {
+    private Engine engine;
+
+    // Constructor injection
+    public Car(Engine engine) {
+        this.engine = engine;
+    }
+
+    public void drive() {
+        engine.start();
+        System.out.println("Car is moving...");
+    }
+}
+
+Running it
+
+ApplicationContext ctx = new ClassPathXmlApplicationContext("applicationContext.xml");
+Car car = ctx.getBean("car", Car.class);
+car.drive();
+
+Spring handles everything:
+•	Creates Engine bean
+•	Creates Car bean
+•	Injects Engine into Car automatically
+
+
+Dependency Lookup
+The dependency lookup is an approach where we get the resource after demand. There can be various ways to get the resource for example
+In such way, we get the resource(instance of A class) directly by new keyword. Another way is factory method:
+1.	A obj = A.getA();  
+This way, we get the resource (instance of A class) by calling the static factory method getA().
+Alternatively, we can get the resource by JNDI (Java Naming Directory Interface) as:
+1.	Context ctx = new InitialContext();  
+2.	Context environmentCtx = (Context) ctx.lookup("java:comp/env");  
+3.	A obj = (A)environmentCtx.lookup("A");  
+There can be various ways to get the resource to obtain the resource. Let's see the problem in this approach.
+Problems of Dependency Lookup
+There are mainly two problems of dependency lookup.
+•	tight coupling The dependency lookup approach makes the code tightly coupled. If resource is changed, we need to perform a lot of modification in the code.
+•	Not easy for testing This approach creates a lot of problems while testing the application especially in black box testing.
+
+
+
+
+
+
+Dependency Injection by constructor-
+We can inject the dependency by constructor. The <constructor-arg> subelement of <bean> is used for constructor injection
+
+Here we are going to inject
+1.	primitive and String-based values
+2.	Dependent object (contained object)
+3.	Collection values etc.
+
+
+Injection primitive and string based values
+Let's see the simple example to inject primitive and string-based values. We have created three files here:
+•	Employee.java
+•	applicationContext.xml
+•	Test.java
+Employee.java
+It is a simple class containing two fields id and name. There are four constructors and one method in this class.
+
+1.	package com.javatpoint;  
+2.	  
+3.	public class Employee {  
+4.	private int id;  
+5.	private String name;  
+6.	  
+7.	public Employee() {System.out.println("def cons");}  
+8.	  
+9.	public Employee(int id) {this.id = id;}  
+10.	  
+11.	public Employee(String name) {  this.name = name;}  
+12.	  
+13.	public Employee(int id, String name) {  
+14.	    this.id = id;  
+15.	    this.name = name;  
+16.	}  
+17.	  
+18.	void show(){  
+19.	    System.out.println(id+" "+name);  
+20.	}  
+21.	  
+22.	}  
+ applicationContext.xml
+We are providing the information into the bean by this file. The constructor-arg element invokes the constructor. In such case, parameterized constructor of int type will be invoked. The value attribute of constructor-arg element will assign the specified value. The type attribute specifies that int parameter constructor will be invoked.
+1.	<?xml version="1.0" encoding="UTF-8"?>  
+2.	<beans  
+3.	    xmlns="http://www.springframework.org/schema/beans"  
+4.	    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"  
+5.	    xmlns:p="http://www.springframework.org/schema/p"  
+6.	    xsi:schemaLocation="http://www.springframework.org/schema/beans  
+7.	                http://www.springframework.org/schema/beans/spring-beans-3.0.xsd">  
+8.	  
+9.	<bean id="e" class="com.javatpoint.Employee">  
+10.	<constructor-arg value="10" type="int"></constructor-arg>  
+11.	</bean>  
+12.	  
+13.	</beans>  
+
+Test.java
+This class gets the bean from the applicationContext.xml file and calls the show method.
+1.	package com.javatpoint;  
+2.	  
+3.	import org.springframework.beans.factory.BeanFactory;  
+4.	import org.springframework.beans.factory.xml.XmlBeanFactory;  
+5.	import org.springframework.core.io.*;  
+6.	  
+7.	public class Test {  
+8.	    public static void main(String[] args) {  
+9.	          
+10.	        Resource r=new ClassPathResource("applicationContext.xml");  
+11.	        BeanFactory factory=new XmlBeanFactory(r);  
+12.	          
+13.	        Employee s=(Employee)factory.getBean("e");  
+14.	        s.show();  
+15.	          
+16.	    }  
+17.	}  
+Output:10 null
+
+Injecting string-based values
+If you don't specify the type attribute in the constructor-arg element, by default string type constructor will be invoked.
+1.	....  
+2.	<bean id="e" class="com.javatpoint.Employee">  
+3.	<constructor-arg value="10"></constructor-arg>  
+4.	</bean>  
+5.	....  
+If you change the bean element as given above, string parameter constructor will be invoked and the output will be 0 10.
+Output:0 10
+________________________________________
+You may also pass the string literal as following:
+1.	....  
+2.	<bean id="e" class="com.javatpoint.Employee">  
+3.	<constructor-arg value="Sonoo"></constructor-arg>  
+4.	</bean>  
+5.	....  
+Output:0 Sonoo
+________________________________________
+You may pass integer literal and string both as following
+1.	....  
+2.	<bean id="e" class="com.javatpoint.Employee">  
+3.	<constructor-arg value="10" type="int" ></constructor-arg>  
+4.	<constructor-arg value="Sonoo"></constructor-arg>  
+5.	</bean>  
+6.	....  
+Output:10 Sonoo
+
+Constructor Injection with Depoendent Object
+HAS-A relationship in Java
+In Jaava, a “has-a” relationship represenets composition or aggregation between two classes – meaning one class contains another class as a member(field)
+
+-	A has-a relationship means an object contains another object
+-	💡 Example:
+-	Let’s say you have a Car and an Engine.
+-	A car has an engine.
+class Engine {
+    void start() {
+        System.out.println("Engine started!");
+    }
+}
+
+class Car {
+    private Engine engine;  // Car HAS-A Engine
+
+    public Car() {
+        engine = new Engine();
+    }
+
+    void startCar() {
+        engine.start();
+        System.out.println("Car is running!");
+    }
+}
+
+public class Main {
+    public static void main(String[] args) {
+        Car car = new Car();
+        car.startCar();
+    }
+}
+🧩 Explanation:
+•	The Car class contains an Engine object.
+•	That means Car has-a Engine.
+•	This is composition: the engine exists as part of the car.
+If the car is destroyed, the engine also ceases to exist (in this context).
+________________________________________
+🧱 Types of “Has-a” relationships:
+Type	Description	Example
+Composition	Strong ownership. Contained object cannot exist without the container.	A Car has an Engine.
+Aggregation	Weak ownership. Contained object can exist independently.	A Library has Books. (Books can exist without the library.)
+
+
+
+
+🧩 Both are “Has-a” relationships
+They both describe a class containing another class —
+but the difference lies in ownership and lifecycle.
+________________________________________
+⚙️ 1️⃣ Composition (Strong relationship)
+💡 Meaning:
+•	One object owns another.
+•	The contained object cannot exist without the container.
+•	If the container is destroyed, the contained object also gets destroyed.
+
+class Engine {
+    void start() {
+        System.out.println("Engine started!");
+    }
+}
+
+class Car {
+    private Engine engine = new Engine();  // composition
+
+    void startCar() {
+        engine.start();
+        System.out.println("Car started!");
+    }
+}
+Explanation:
+•	A Car has-an Engine.
+•	The engine’s lifecycle depends on the car’s lifecycle.
+•	If the car is destroyed, its engine goes with it.
+(You can’t use that engine independently anymore.)
+🧠 In short:
+Composition = Strong ownership
+Lifecycle is dependent
+________________________________________
+⚙️ 2️⃣ Aggregation (Weak relationship)
+💡 Meaning:
+•	The contained object can exist independently of the container.
+•	The container just uses or refers to the object.
+📘 Example:
+class Library {
+    private List<Book> books;
+
+    Library(List<Book> books) {
+        this.books = books;   // aggregation
+    }
+
+    void showBooks() {
+        for (Book b : books)
+            System.out.println(b.title);
+    }
+}
+
+class Book {
+    String title;
+
+    Book(String title) {
+        this.title = title;
+    }
+}
+🔍 Explanation:
+•	A Library has Books, but books can exist outside a library.
+•	If the library closes, the books still exist.
+🧠 In short:
+Aggregation = Weak ownership
+Lifecycle is independent
+________________________________________
+🔬 Quick Comparison Table
+Feature	Composition	Aggregation
+Relationship Type	Strong (Part-of)	Weak (Has-a)
+Ownership	Container owns the part	Shared or referenced
+Lifecycle	Dependent	Independent
+Example	Car → Engine	Library → Book
+Implemented by	Creating the object inside the class	Passing the object from outside (via constructor/setter)
+
+Composition:
+Car ───contains───▶ Engine
+   (Engine exists only with Car)
+
+Aggregation:
+Library ───uses───▶ Book
+   (Book can exist even without Library)
+
+
+
+If there is HAS-A relationship between the classes, we create the instance of dependent object (contained object) first then pass it as an argument of the main class constructor. Here, our scenario is Employee HAS-A Address. The Address class object will be termed as the dependent object. Let's see the Address class first:
+Address.java
+This class contains three properties, one constructor and toString() method to return the values of these object.
+1.	package com.javatpoint;  
+2.	  
+3.	public class Address {  
+4.	private String city;  
+5.	private String state;  
+6.	private String country;  
+7.	  
+8.	public Address(String city, String state, String country) {  
+9.	    super();  
+10.	    this.city = city;  
+11.	    this.state = state;  
+12.	    this.country = country;  
+13.	}  
+14.	  
+15.	public String toString(){  
+16.	    return city+" "+state+" "+country;  
+17.	}  
+18.	}  
+Employee.java
+It contains three properties id, name and address(dependent object) ,two constructors and show() method to show the records of the current object including the depedent object.
+1.	package com.javatpoint;  
+2.	  
+3.	public class Employee {  
+4.	private int id;  
+5.	private String name;  
+6.	private Address address;//Aggregation  
+7.	  
+8.	public Employee() {System.out.println("def cons");}  
+9.	  
+10.	public Employee(int id, String name, Address address) {  
+11.	    super();  
+12.	    this.id = id;  
+13.	    this.name = name;  
+14.	    this.address = address;  
+15.	}  
+16.	  
+17.	void show(){  
+18.	    System.out.println(id+" "+name);  
+19.	    System.out.println(address.toString());  
+20.	}  
+21.	  
+22.	}  
+applicationContext.xml
+The ref attribute is used to define the reference of another object, such way we are passing the dependent object as an constructor argument.
+1.	<?xml version="1.0" encoding="UTF-8"?>  
+2.	<beans  
+3.	    xmlns="http://www.springframework.org/schema/beans"  
+4.	    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"  
+5.	    xmlns:p="http://www.springframework.org/schema/p"  
+6.	    xsi:schemaLocation="http://www.springframework.org/schema/beans  
+7.	                http://www.springframework.org/schema/beans/spring-beans-3.0.xsd">  
+8.	  
+9.	<bean id="a1" class="com.javatpoint.Address">  
+10.	<constructor-arg value="ghaziabad"></constructor-arg>  
+11.	<constructor-arg value="UP"></constructor-arg>  
+12.	<constructor-arg value="India"></constructor-arg>  
+13.	</bean>  
+14.	  
+15.	  
+16.	<bean id="e" class="com.javatpoint.Employee">  
+17.	<constructor-arg value="12" type="int"></constructor-arg>  
+18.	<constructor-arg value="Sonoo"></constructor-arg>  
+19.	<constructor-arg>  
+20.	<ref bean="a1"/>  
+21.	</constructor-arg>  
+22.	</bean>  
+23.	  
+24.	</beans>  
+Test.java
+This class gets the bean from the applicationContext.xml file and calls the show method.
+1.	package com.javatpoint;  
+2.	  
+3.	import org.springframework.beans.factory.BeanFactory;  
+4.	import org.springframework.beans.factory.xml.XmlBeanFactory;  
+5.	import org.springframework.core.io.*;  
+6.	  
+7.	public class Test {  
+8.	    public static void main(String[] args) {  
+9.	          
+10.	        Resource r=new ClassPathResource("applicationContext.xml");  
+11.	        BeanFactory factory=new XmlBeanFactory(r);  
+12.	          
+13.	        Employee s=(Employee)factory.getBean("e");  
+14.	        s.show();  
+15.	          
+16.	    }  
+17.	}  
+
+
+Constructor Injection with Collection-
+We can inject collection values by constructor in Spring framework. There can be used three lements inside the constructor-arg element
+1.	List
+2.	Set 
+3.	Map
+Each collection can have string based and non-string based values
+In this example, we are taking the example of Forum where One question can have multiple answers. There are three pages:
+1.	Question.java
+2.	applicationContext.xml
+3.	Test.java
+In this example, we are using list that can have duplicate elements, you may use set that have only unique elements. But, you need to change list to set in the applicationContext.xml file and List to Set in the Question.java file.
+Question.java
+This class contains three properties, two constructors and displayInfo() method that prints the information. Here, we are using List to contain the multiple answers.
+1.	package com.javatpoint;  
+2.	  
+3.	import java.util.Iterator;  
+4.	import java.util.List;  
+5.	  
+6.	public class Question {  
+7.	private int id;  
+8.	private String name;  
+9.	private List<String> answers;  
+10.	  
+11.	public Question() {}  
+12.	public Question(int id, String name, List<String> answers) {  
+13.	    super();  
+14.	    this.id = id;  
+15.	    this.name = name;  
+16.	    this.answers = answers;  
+17.	}  
+18.	  
+19.	public void displayInfo(){  
+20.	    System.out.println(id+" "+name);  
+21.	    System.out.println("answers are:");  
+22.	    Iterator<String> itr=answers.iterator();  
+23.	    while(itr.hasNext()){  
+24.	        System.out.println(itr.next());  
+25.	    }  
+26.	}  
+27.	  
+28.	}  
+applicationContext.xml
+The list element of constructor-arg is used here to define the list.
+1.	<?xml version="1.0" encoding="UTF-8"?>  
+2.	<beans  
+3.	    xmlns="http://www.springframework.org/schema/beans"  
+4.	    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"  
+5.	    xmlns:p="http://www.springframework.org/schema/p"  
+6.	    xsi:schemaLocation="http://www.springframework.org/schema/beans  
+7.	 http://www.springframework.org/schema/beans/spring-beans-3.0.xsd">  
+8.	  
+9.	<bean id="q" class="com.javatpoint.Question">  
+10.	<constructor-arg value="111"></constructor-arg>  
+11.	<constructor-arg value="What is java?"></constructor-arg>  
+12.	<constructor-arg>  
+13.	<list>  
+14.	<value>Java is a programming language</value>  
+15.	<value>Java is a Platform</value>  
+16.	<value>Java is an Island of Indonasia</value>  
+17.	</list>  
+18.	</constructor-arg>  
+19.	</bean>  
+20.	  
+21.	</beans>  
+Test.java
+This class gets the bean from the applicationContext.xml file and calls the displayInfo method.
+1.	package com.javatpoint;  
+2.	  
+3.	import org.springframework.beans.factory.BeanFactory;  
+4.	import org.springframework.beans.factory.xml.XmlBeanFactory;  
+5.	import org.springframework.core.io.ClassPathResource;  
+6.	import org.springframework.core.io.Resource;  
+7.	  
+8.	public class Test {  
+9.	public static void main(String[] args) {  
+10.	    Resource r=new ClassPathResource("applicationContext.xml");  
+11.	    BeanFactory factory=new XmlBeanFactory(r);  
+12.	      
+13.	    Question q=(Question)factory.getBean("q");  
+14.	    q.displayInfo();  
+15.	      
+16.	}  
+17.	}  
+
+Constructor Injection with Non String Collection-
+
+If we have dependent object in the collection, we can inject these information by using the ref element inside the list, set or map.
+In this example, we are taking the example of Forum where One question can have multiple answers. But Answer has its own information such as answerId, answer and postedBy. There are four pages used in this example:
+1.	Question.java
+2.	Answer.java
+3.	applicationContext.xml
+4.	Test.java
+In this example, we are using list that can have duplicate elements, you may use set that have only unique elements. But, you need to change list to set in the applicationContext.xml file and List to Set in the Question.java file.
+Question.java
+This class contains three properties, two constructors and displayInfo() method that prints the information. Here, we are using List to contain the multiple answers.
+1.	package com.javatpoint;  
+2.	  
+3.	import java.util.Iterator;  
+4.	import java.util.List;  
+5.	  
+6.	public class Question {  
+7.	private int id;  
+8.	private String name;  
+9.	private List<Answer> answers;  
+10.	  
+11.	public Question() {}  
+12.	public Question(int id, String name, List<Answer> answers) {  
+13.	    super();  
+14.	    this.id = id;  
+15.	    this.name = name;  
+16.	    this.answers = answers;  
+17.	}  
+18.	  
+19.	public void displayInfo(){  
+20.	    System.out.println(id+" "+name);  
+21.	    System.out.println("answers are:");  
+22.	    Iterator<Answer> itr=answers.iterator();  
+23.	    while(itr.hasNext()){  
+24.	        System.out.println(itr.next());  
+25.	    }  
+26.	}  
+27.	  
+28.	}  
+Answer.java
+This class has three properties id, name and by with constructor and toString() method.
+1.	package com.javatpoint;  
+2.	  
+3.	public class Answer {  
+4.	private int id;  
+5.	private String name;  
+6.	private String by;  
+7.	  
+8.	public Answer() {}  
+9.	public Answer(int id, String name, String by) {  
+10.	    super();  
+11.	    this.id = id;  
+12.	    this.name = name;  
+13.	    this.by = by;  
+14.	}  
+15.	  
+16.	public String toString(){  
+17.	    return id+" "+name+" "+by;  
+18.	}  
+19.	}  
+applicationContext.xml
+The ref element is used to define the reference of another bean. Here, we are using bean attribute of ref element to specify the reference of another bean.
+1.	<?xml version="1.0" encoding="UTF-8"?>  
+2.	<beans  
+3.	    xmlns="http://www.springframework.org/schema/beans"  
+4.	    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"  
+5.	    xmlns:p="http://www.springframework.org/schema/p"  
+6.	    xsi:schemaLocation="http://www.springframework.org/schema/beans   
+7.	http://www.springframework.org/schema/beans/spring-beans-3.0.xsd">  
+8.	  
+9.	<bean id="ans1" class="com.javatpoint.Answer">  
+10.	<constructor-arg value="1"></constructor-arg>  
+11.	<constructor-arg value="Java is a programming language"></constructor-arg>  
+12.	<constructor-arg value="John"></constructor-arg>  
+13.	</bean>  
+14.	  
+15.	<bean id="ans2" class="com.javatpoint.Answer">  
+16.	<constructor-arg value="2"></constructor-arg>  
+17.	<constructor-arg value="Java is a Platform"></constructor-arg>  
+18.	<constructor-arg value="Ravi"></constructor-arg>  
+19.	</bean>  
+20.	  
+21.	<bean id="q" class="com.javatpoint.Question">  
+22.	<constructor-arg value="111"></constructor-arg>  
+23.	<constructor-arg value="What is java?"></constructor-arg>  
+24.	<constructor-arg>  
+25.	<list>  
+26.	<ref bean="ans1"/>  
+27.	<ref bean="ans2"/>  
+28.	</list>  
+29.	</constructor-arg>  
+30.	</bean>  
+31.	  
+32.	</beans>  
+Test.java
+This class gets the bean from the applicationContext.xml file and calls the displayInfo method.
+1.	package com.javatpoint;  
+2.	  
+3.	import org.springframework.beans.factory.BeanFactory;  
+4.	import org.springframework.beans.factory.xml.XmlBeanFactory;  
+5.	import org.springframework.core.io.ClassPathResource;  
+6.	import org.springframework.core.io.Resource;  
+7.	  
+8.	public class Test {  
+9.	public static void main(String[] args) {  
+10.	    Resource r=new ClassPathResource("applicationContext.xml");  
+11.	    BeanFactory factory=new XmlBeanFactory(r);  
+12.	      
+13.	    Question q=(Question)factory.getBean("q");  
+14.	    q.displayInfo();  
+15.	      
+16.	}  
+17.	}  
+
+
+
+
+
+
+
+
+
+Constructor Injection with Map Example
+In this example, we are using map as the answer that have answer with posted username. Here, we are using key and value pair both as a string
+
+Like previous examples, it is the example of forum where one question can have multiple answers
+
+Question.java
+This class contains three properties, two constructors and displayInfo() method to display the information
+
+1.	package com.javatpoint;  
+2.	import java.util.Iterator;  
+3.	import java.util.Map;  
+4.	import java.util.Set;  
+5.	import java.util.Map.Entry;  
+6.	  
+7.	public class Question {  
+8.	private int id;  
+9.	private String name;  
+10.	private Map<String,String> answers;  
+11.	  
+12.	public Question() {}  
+13.	public Question(int id, String name, Map<String, String> answers) {  
+14.	    super();  
+15.	    this.id = id;  
+16.	    this.name = name;  
+17.	    this.answers = answers;  
+18.	}  
+19.	  
+20.	public void displayInfo(){  
+21.	    System.out.println("question id:"+id);  
+22.	    System.out.println("question name:"+name);  
+23.	    System.out.println("Answers....");  
+24.	    Set<Entry<String, String>> set=answers.entrySet();  
+25.	    Iterator<Entry<String, String>> itr=set.iterator();  
+26.	    while(itr.hasNext()){  
+27.	        Entry<String,String> entry=itr.next();  
+28.	        System.out.println("Answer:"+entry.getKey()+" Posted By:"+entry.getValue());  
+29.	    }  
+30.	}  
+31.	}  
+
+applicationContext.xml
+The entry attribute of map is used to define the key and value information
+
+1.	<?xml version="1.0" encoding="UTF-8"?>  
+2.	<beans  
+3.	    xmlns="http://www.springframework.org/schema/beans"  
+4.	    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"  
+5.	    xmlns:p="http://www.springframework.org/schema/p"  
+6.	    xsi:schemaLocation="http://www.springframework.org/schema/beans   
+7.	http://www.springframework.org/schema/beans/spring-beans-3.0.xsd">  
+8.	  
+9.	<bean id="q" class="com.javatpoint.Question">  
+10.	<constructor-arg value="11"></constructor-arg>  
+11.	<constructor-arg value="What is Java?"></constructor-arg>  
+12.	<constructor-arg>  
+13.	<map>  
+14.	<entry key="Java is a Programming Language"  value="Ajay Kumar"></entry>  
+15.	<entry key="Java is a Platform" value="John Smith"></entry>  
+16.	<entry key="Java is an Island" value="Raj Kumar"></entry>  
+17.	</map>  
+18.	</constructor-arg>  
+19.	</bean>  
+20.	  
+21.	</beans>  
+
+Test.java
+This class gets the bean from the applicationContext.xml and calls the displayInfo() method
+
+Package com.javatpoint
+
+Import org.springframework.beans.factory.BeanFactory
+Import org.springframework.beans.rfactory.xml.XmlBeanFactory
+Import org.springframework.core.io.ClassPathResource
+Import org.springframework.core.io.Resource
+
+Public class Test{
+Public static void main(String[] args){
+Resource r = new ClassPathResource(“applicationContext.xml”);
+•      BeanFactory factory=new XmlBeanFactory(r);  
+•        
+•      Question q=(Question)factory.getBean("q");  
+•      q.displayInfo();  
+•        
+•  }  
+•  }  
+}
+}
+
+Constructor Injection with Non String Map(having dependent object) Example
+In this example, we are using map as the answer that have Answer and User. Here, we are using key and value pair both as an object. Answer has its own information such as answerId, answer and postedDate, User has its own information such as userId, username, emailId.
+Like previous examples, it is the example of forum where one question can have multiple answers.
+Question.java
+This class contains three properties, two constructors and displayInfo() method to display the information.
+1.	package com.javatpoint;  
+2.	import java.util.Iterator;  
+3.	import java.util.Map;  
+4.	import java.util.Set;  
+5.	import java.util.Map.Entry;  
+6.	  
+7.	public class Question {  
+8.	private int id;  
+9.	private String name;  
+10.	private Map<Answer,User> answers;  
+11.	  
+12.	public Question() {}  
+13.	public Question(int id, String name, Map<Answer, User> answers) {  
+14.	    super();  
+15.	    this.id = id;  
+16.	    this.name = name;  
+17.	    this.answers = answers;  
+18.	}  
+19.	  
+20.	  
+21.	public void displayInfo(){  
+22.	    System.out.println("question id:"+id);  
+23.	    System.out.println("question name:"+name);  
+24.	    System.out.println("Answers....");  
+25.	    Set<Entry<Answer, User>> set=answers.entrySet();  
+26.	    Iterator<Entry<Answer, User>> itr=set.iterator();  
+27.	    while(itr.hasNext()){  
+28.	        Entry<Answer, User> entry=itr.next();  
+29.	        Answer ans=entry.getKey();  
+30.	        User user=entry.getValue();  
+31.	        System.out.println("Answer Information:");  
+32.	        System.out.println(ans);  
+33.	        System.out.println("Posted By:");  
+34.	        System.out.println(user);  
+35.	    }  
+36.	}  
+37.	}  
+Answer.java
+1.	package com.javatpoint;  
+2.	  
+3.	import java.util.Date;  
+4.	  
+5.	public class Answer {  
+6.	private int id;  
+7.	private String answer;  
+8.	private Date postedDate;  
+9.	public Answer() {}  
+10.	public Answer(int id, String answer, Date postedDate) {  
+11.	    super();  
+12.	    this.id = id;  
+13.	    this.answer = answer;  
+14.	    this.postedDate = postedDate;  
+15.	}  
+16.	  
+17.	public String toString(){  
+18.	    return "Id:"+id+" Answer:"+answer+" Posted Date:"+postedDate;  
+19.	}  
+20.	}  
+User.java
+1.	package com.javatpoint;  
+2.	  
+3.	public class User {  
+4.	private int id;  
+5.	private String name,email;  
+6.	public User() {}  
+7.	public User(int id, String name, String email) {  
+8.	    super();  
+9.	    this.id = id;  
+10.	    this.name = name;  
+11.	    this.email = email;  
+12.	}  
+13.	  
+14.	public String toString(){  
+15.	    return "Id:"+id+" Name:"+name+" Email Id:"+email;  
+16.	}  
+17.	}  
+applicationContext.xml
+The key-ref and value-ref attributes of entry element is used to define the reference of bean in the map.
+1.	<?xml version="1.0" encoding="UTF-8"?>  
+2.	<beans  
+3.	    xmlns="http://www.springframework.org/schema/beans"  
+4.	    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"  
+5.	    xmlns:p="http://www.springframework.org/schema/p"  
+6.	    xsi:schemaLocation="http://www.springframework.org/schema/beans   
+7.	http://www.springframework.org/schema/beans/spring-beans-3.0.xsd">  
+8.	  
+9.	<bean id="answer1" class="com.javatpoint.Answer">  
+10.	<constructor-arg value="1"></constructor-arg>  
+11.	<constructor-arg value="Java is a Programming Language"></constructor-arg>  
+12.	<constructor-arg value="12/12/2001"></constructor-arg>  
+13.	</bean>  
+14.	<bean id="answer2" class="com.javatpoint.Answer">  
+15.	<constructor-arg value="2"></constructor-arg>  
+16.	<constructor-arg value="Java is a Platform"></constructor-arg>  
+17.	<constructor-arg value="12/12/2003"></constructor-arg>  
+18.	</bean>  
+19.	  
+20.	<bean id="user1" class="com.javatpoint.User">  
+21.	<constructor-arg value="1"></constructor-arg>  
+22.	<constructor-arg value="Arun Kumar"></constructor-arg>  
+23.	<constructor-arg value="arun@gmail.com"></constructor-arg>  
+24.	</bean>  
+25.	<bean id="user2" class="com.javatpoint.User">  
+26.	<constructor-arg value="2"></constructor-arg>  
+27.	<constructor-arg value="Varun Kumar"></constructor-arg>  
+28.	<constructor-arg value="Varun@gmail.com"></constructor-arg>  
+29.	</bean>  
+30.	  
+31.	<bean id="q" class="com.javatpoint.Question">  
+32.	<constructor-arg value="1"></constructor-arg>  
+33.	<constructor-arg value="What is Java?"></constructor-arg>  
+34.	<constructor-arg>  
+35.	<map>  
+36.	<entry key-ref="answer1" value-ref="user1"></entry>  
+37.	<entry key-ref="answer2" value-ref="user2"></entry>  
+38.	</map>  
+39.	</constructor-arg>  
+40.	</bean>  
+41.	  
+42.	</beans>  
+Test.java
+This class gets the bean from the applicationContext.xml file and calls the displayInfo() method to display the information.
+1.	package com.javatpoint;  
+2.	  
+3.	import org.springframework.beans.factory.BeanFactory;  
+4.	import org.springframework.beans.factory.xml.XmlBeanFactory;  
+5.	import org.springframework.core.io.ClassPathResource;  
+6.	import org.springframework.core.io.Resource;  
+7.	  
+8.	public class Test {  
+9.	public static void main(String[] args) {  
+10.	    Resource r=new ClassPathResource("applicationContext.xml");  
+11.	    BeanFactory factory=new XmlBeanFactory(r);  
+12.	      
+13.	    Question q=(Question)factory.getBean("q");  
+14.	    q.displayInfo();  
+15.	      
+16.	}  
+17.	}  
+
+
+Inheriting Bean in Spring
+By using the parent attribute of bean, we can specify the inheritance relation between the beans. In such case, parent bean values will be inherited to the current bean.
+Let's see the simple example to inherit the bean.
+Employee.java
+This class contains three properties, three constructor and show() method to display the values.
+1.	package com.javatpoint;  
+2.	  
+3.	public class Employee {  
+4.	private int id;  
+5.	private String name;  
+6.	private Address address;  
+7.	public Employee() {}  
+8.	  
+9.	public Employee(int id, String name) {  
+10.	    super();  
+11.	    this.id = id;  
+12.	    this.name = name;  
+13.	}  
+14.	public Employee(int id, String name, Address address) {  
+15.	    super();  
+16.	    this.id = id;  
+17.	    this.name = name;  
+18.	    this.address = address;  
+19.	}  
+20.	  
+21.	void show(){  
+22.	    System.out.println(id+" "+name);  
+23.	    System.out.println(address);  
+24.	}  
+25.	  
+26.	}  
+Address.java
+1.	package com.javatpoint;  
+2.	  
+3.	public class Address {  
+4.	private String addressLine1,city,state,country;  
+5.	  
+6.	public Address(String addressLine1, String city, String state, String country) {  
+7.	    super();  
+8.	    this.addressLine1 = addressLine1;  
+9.	    this.city = city;  
+10.	    this.state = state;  
+11.	    this.country = country;  
+12.	}  
+13.	public String toString(){  
+14.	    return addressLine1+" "+city+" "+state+" "+country;  
+15.	}  
+16.	  
+17.	}  
+applicationContext.xml
+1.	<?xml version="1.0" encoding="UTF-8"?>  
+2.	<beans  
+3.	    xmlns="http://www.springframework.org/schema/beans"  
+4.	    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"  
+5.	    xmlns:p="http://www.springframework.org/schema/p"  
+6.	    xsi:schemaLocation="http://www.springframework.org/schema/beans   
+7.	http://www.springframework.org/schema/beans/spring-beans-3.0.xsd">  
+8.	  
+9.	<bean id="e1" class="com.javatpoint.Employee">  
+10.	<constructor-arg value="101"></constructor-arg>  
+11.	<constructor-arg  value="Sachin"></constructor-arg>  
+12.	</bean>  
+13.	  
+14.	<bean id="address1" class="com.javatpoint.Address">  
+15.	<constructor-arg value="21,Lohianagar"></constructor-arg>  
+16.	<constructor-arg value="Ghaziabad"></constructor-arg>  
+17.	<constructor-arg value="UP"></constructor-arg>  
+18.	<constructor-arg value="USA"></constructor-arg>  
+19.	</bean>  
+20.	  
+21.	<bean id="e2" class="com.javatpoint.Employee" parent="e1">  
+22.	<constructor-arg ref="address1"></constructor-arg>  
+23.	</bean>  
+24.	  
+25.	</beans>  
+Test.java
+This class gets the bean from the applicationContext.xml file and calls the show method.
+1.	package com.javatpoint;  
+2.	  
+3.	import org.springframework.beans.factory.BeanFactory;  
+4.	import org.springframework.beans.factory.xml.XmlBeanFactory;  
+5.	import org.springframework.core.io.ClassPathResource;  
+6.	import org.springframework.core.io.Resource;  
+7.	  
+8.	public class Test {  
+9.	public static void main(String[] args) {  
+10.	    Resource r=new ClassPathResource("applicationContext.xml");  
+11.	    BeanFactory factory=new XmlBeanFactory(r);  
+12.	      
+13.	    Employee e1=(Employee)factory.getBean("e2");  
+14.	    e1.show();  
+15.	      
+16.	}  
+17.	}  
+
+
+Dependency Injection by Setter method
+We can inject the dependency by setter method also. The <property> subelement of <bean> is used for setter injection. Here we are going to inject
+1.	Primitive and string based values
+2.	Dependent object (contained object)
+3.	Collection values 
+
+Injecting Primitive and sting based values by setter method
+Let's see the simple example to inject primitive and string-based values by setter method. We have created three files here:
+•	Employee.java
+•	applicationContext.xml
+•	Test.java
+Employee.java
+It is a simple class containing three fields id, name and city with its setters and getters and a method to display these informations.
+1.	package com.javatpoint;  
+2.	  
+3.	public class Employee {  
+4.	private int id;  
+5.	private String name;  
+6.	private String city;  
+7.	  
+8.	public int getId() {  
+9.	    return id;  
+10.	}  
+11.	public void setId(int id) {  
+12.	    this.id = id;  
+13.	}  
+14.	public String getName() {  
+15.	    return name;  
+16.	}  
+17.	public void setName(String name) {  
+18.	    this.name = name;  
+19.	}  
+20.	  
+21.	public String getCity() {  
+22.	    return city;  
+23.	}  
+24.	public void setCity(String city) {  
+25.	    this.city = city;  
+26.	}  
+27.	void display(){  
+28.	    System.out.println(id+" "+name+" "+city);  
+29.	}  
+30.	  
+31.	}  
+applicationContext.xml
+We are providing the information into the bean by this file. The property element invokes the setter method. The value subelement of property will assign the specified value.
+•  <?xml version="1.0" encoding="UTF-8"?>  
+•  <beans  
+•      xmlns="http://www.springframework.org/schema/beans"  
+•      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"  
+•      xmlns:p="http://www.springframework.org/schema/p"  
+•      xsi:schemaLocation="http://www.springframework.org/schema/beans  
+•                  http://www.springframework.org/schema/beans/spring-beans-3.0.xsd">  
+<bean id = “obj” class = “com.javatpoint.Employee”>
+<property name = “id”>
+<value>20</value>
+</property>
+•  <property name="name">  
+•  <value>Arun</value>  
+•  </property>  
+•  <property name="city">  
+•  <value>ghaziabad</value>  
+•  </property>  
+•    
+•  </bean>  
+•    
+•  </beans>  
+
+Test.java
+This class gets the bean from the applicationContext.xml file and calls the display method.
+1.	package com.javatpoint;  
+2.	  
+3.	import org.springframework.beans.factory.BeanFactory;  
+4.	import org.springframework.beans.factory.xml.XmlBeanFactory;  
+5.	import org.springframework.core.io.*;  
+6.	  
+7.	public class Test {  
+8.	    public static void main(String[] args) {  
+9.	          
+10.	        Resource r=new ClassPathResource("applicationContext.xml");  
+11.	        BeanFactory factory=new XmlBeanFactory(r);  
+12.	          
+13.	        Employee e=(Employee)factory.getBean("obj");  
+14.	        s.display();  
+15.	          
+16.	    }  
+17.	}  
+Setter Injection with Dependent Object Example
+Like Constructor Injection, we can inject  the dependency of another bean using setters. In such case, we use property element. Here, our scenario is Employee HAS-A Address. The Address class object will be termed as the depednmdet object
+
+Address.java
+This class contains four properties, setters and getters and toString() method.
+1.	package com.javatpoint;  
+2.	  
+3.	public class Address {  
+4.	private String addressLine1,city,state,country;  
+5.	  
+6.	//getters and setters  
+7.	  
+8.	public String toString(){  
+9.	    return addressLine1+" "+city+" "+state+" "+country;  
+10.	}  
+Employee.java
+It contains three properties id, name and address(dependent object) , setters and getters with displayInfo() method.
+1.	package com.javatpoint;  
+2.	  
+3.	public class Employee {  
+4.	private int id;  
+5.	private String name;  
+6.	private Address address;  
+7.	  
+8.	//setters and getters  
+9.	  
+10.	void displayInfo(){  
+11.	    System.out.println(id+" "+name);  
+12.	    System.out.println(address);  
+13.	}  
+14.	}  
+applicationContext.xml
+The ref attribute of property elements is used to define the reference of another bean.
+1.	<?xml version="1.0" encoding="UTF-8"?>  
+2.	<beans  
+3.	    xmlns="http://www.springframework.org/schema/beans"  
+4.	    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"  
+5.	    xmlns:p="http://www.springframework.org/schema/p"  
+6.	    xsi:schemaLocation="http://www.springframework.org/schema/beans   
+7.	http://www.springframework.org/schema/beans/spring-beans-3.0.xsd">  
+8.	  
+9.	<bean id="address1" class="com.javatpoint.Address">  
+10.	<property name="addressLine1" value="51,Lohianagar"></property>  
+11.	<property name="city" value="Ghaziabad"></property>  
+12.	<property name="state" value="UP"></property>  
+13.	<property name="country" value="India"></property>  
+14.	</bean>  
+15.	  
+16.	<bean id="obj" class="com.javatpoint.Employee">  
+17.	<property name="id" value="1"></property>  
+18.	<property name="name" value="Sachin Yadav"></property>  
+19.	<property name="address" ref="address1"></property>  
+20.	</bean>  
+21.	  
+22.	</beans>  
+Test.java
+This class gets the bean from the applicationContext.xml file and calls the displayInfo() method.
+1.	package com.javatpoint;  
+2.	  
+3.	import org.springframework.beans.factory.BeanFactory;  
+4.	import org.springframework.beans.factory.xml.XmlBeanFactory;  
+5.	import org.springframework.context.ApplicationContext;  
+6.	import org.springframework.context.support.ClassPathXmlApplicationContext;  
+7.	import org.springframework.core.io.ClassPathResource;  
+8.	import org.springframework.core.io.Resource;  
+9.	  
+10.	public class Test {  
+11.	public static void main(String[] args) {  
+12.	    Resource r=new ClassPathResource("applicationContext.xml");  
+13.	    BeanFactory factory=new XmlBeanFactory(r);  
+14.	      
+15.	    Employee e=(Employee)factory.getBean("obj");  
+16.	    e.displayInfo();  
+17.	      
+18.	}  
+19.	}  
+
+Setter Injection with C	ollecttion Example
+We can inject collection values by setter method in spring framework. There can be used three elements inside the p[roperty element
+It can be:
+1.	list
+2.	set
+3.	map
+Each collection can have string based and non-string based values.
+In this example, we are taking the example of Forum where One question can have multiple answers. There are three pages:
+1.	Question.java
+2.	applicationContext.xml
+3.	Test.java
+In this example, we are using list that can have duplicate elements, you may use set that have only unique elements. But, you need to change list to set in the applicationContext.xml file and List to Set in the Question.java file.
+Question.java
+This class contains three properties with setters and getters and displayInfo() method that prints the information. Here, we are using List to contain the multiple answers.
+1.	package com.javatpoint;  
+2.	import java.util.Iterator;  
+3.	import java.util.List;  
+4.	  
+5.	public class Question {  
+6.	private int id;  
+7.	private String name;  
+8.	private List<String> answers;  
+9.	  
+10.	//setters and getters  
+11.	  
+12.	public void displayInfo(){  
+13.	    System.out.println(id+" "+name);  
+14.	    System.out.println("answers are:");  
+15.	    Iterator<String> itr=answers.iterator();  
+16.	    while(itr.hasNext()){  
+17.	        System.out.println(itr.next());  
+18.	    }  
+19.	}  
+20.	  
+21.	}  
+applicationContext.xml
+The list element of constructor-arg is used here to define the list.
+1.	<?xml version="1.0" encoding="UTF-8"?>  
+2.	<beans  
+3.	    xmlns="http://www.springframework.org/schema/beans"  
+4.	    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"  
+5.	    xmlns:p="http://www.springframework.org/schema/p"  
+6.	    xsi:schemaLocation="http://www.springframework.org/schema/beans   
+7.	http://www.springframework.org/schema/beans/spring-beans-3.0.xsd">  
+8.	  
+9.	<bean id="q" class="com.javatpoint.Question">  
+10.	<property name="id" value="1"></property>  
+11.	<property name="name" value="What is Java?"></property>  
+12.	<property name="answers">  
+13.	<list>  
+14.	<value>Java is a programming language</value>  
+15.	<value>Java is a platform</value>  
+16.	<value>Java is an Island</value>  
+17.	</list>  
+18.	</property>  
+19.	</bean>  
+20.	  
+21.	</beans>  
+Test.java
+This class gets the bean from the applicationContext.xml file and calls the displayInfo method.
+1.	package com.javatpoint;  
+2.	  
+3.	import org.springframework.beans.factory.BeanFactory;  
+4.	import org.springframework.beans.factory.xml.XmlBeanFactory;  
+5.	import org.springframework.core.io.ClassPathResource;  
+6.	import org.springframework.core.io.Resource;  
+7.	  
+8.	public class Test {  
+9.	public static void main(String[] args) {  
+10.	    Resource r=new ClassPathResource("applicationContext.xml");  
+11.	    BeanFactory factory=new XmlBeanFactory(r);  
+12.	      
+13.	    Question q=(Question)factory.getBean("q");  
+14.	    q.displayInfo();  
+15.	      
+16.	}  
+17.	}  
+
+Setter Injection with Non – String Collection  (having dependent object) example
+If we have dependent object in the collection, we can inject these information by using the ref element inside the list, set or map. Here, we will use list, set or map element inside the property element.
+In this example, we are taking the example of Forum where One question can have multiple answers. But Answer has its own information such as answerId, answer and postedBy. There are four pages used in this example:
+1.	Question.java
+2.	Answer.java
+3.	applicationContext.xml
+4.	Test.java
+In this example, we are using list that can have duplicate elements, you may use set that have only unique elements. But, you need to change list to set in the applicationContext.xml file and List to Set in the Question.java file.
+Question.java
+This class contains three properties, two constructors and displayInfo() method that prints the information. Here, we are using List to contain the multiple answers.
+1.	package com.javatpoint;  
+2.	  
+3.	import java.util.Iterator;  
+4.	import java.util.List;  
+5.	  
+6.	public class Question {  
+7.	private int id;  
+8.	private String name;  
+9.	private List<Answer> answers;  
+10.	  
+11.	//setters and getters  
+12.	  
+13.	public void displayInfo(){  
+14.	    System.out.println(id+" "+name);  
+15.	    System.out.println("answers are:");  
+16.	    Iterator<Answer> itr=answers.iterator();  
+17.	    while(itr.hasNext()){  
+18.	        System.out.println(itr.next());  
+19.	    }  
+20.	}  
+21.	  
+22.	}  
+Answer.java
+This class has three properties id, name and by with constructor and toString() method.
+1.	package com.javatpoint;  
+2.	  
+3.	public class Answer {  
+4.	private int id;  
+5.	private String name;  
+6.	private String by;  
+7.	  
+8.	//setters and getters  
+9.	  
+10.	public String toString(){  
+11.	    return id+" "+name+" "+by;  
+12.	}  
+13.	}  
+applicationContext.xml
+The ref element is used to define the reference of another bean. Here, we are using bean attribute of ref element to specify the reference of another bean.
+1.	<?xml version="1.0" encoding="UTF-8"?>  
+2.	<beans  
+3.	    xmlns="http://www.springframework.org/schema/beans"  
+4.	    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"  
+5.	    xmlns:p="http://www.springframework.org/schema/p"  
+6.	    xsi:schemaLocation="http://www.springframework.org/schema/beans   
+7.	http://www.springframework.org/schema/beans/spring-beans-3.0.xsd">  
+8.	  
+9.	<bean id="answer1" class="com.javatpoint.Answer">  
+10.	<property name="id" value="1"></property>  
+11.	<property name="name" value="Java is a programming language"></property>  
+12.	<property name="by" value="Ravi Malik"></property>  
+13.	</bean>  
+14.	<bean id="answer2" class="com.javatpoint.Answer">  
+15.	<property name="id" value="2"></property>  
+16.	<property name="name" value="Java is a platform"></property>  
+17.	<property name="by" value="Sachin"></property>  
+18.	</bean>  
+19.	  
+20.	<bean id="q" class="com.javatpoint.Question">  
+21.	<property name="id" value="1"></property>  
+22.	<property name="name" value="What is Java?"></property>  
+23.	<property name="answers">  
+24.	<list>  
+25.	<ref bean="answer1"/>  
+26.	<ref bean="answer2"/>  
+27.	</list>  
+28.	</property>  
+29.	</bean>  
+30.	  
+31.	</beans>  
+Test.java
+This class gets the bean from the applicationContext.xml file and calls the displayInfo method.
+1.	package com.javatpoint;  
+2.	  
+3.	import org.springframework.beans.factory.BeanFactory;  
+4.	import org.springframework.beans.factory.xml.XmlBeanFactory;  
+5.	import org.springframework.core.io.ClassPathResource;  
+6.	import org.springframework.core.io.Resource;  
+7.	  
+8.	public class Test {  
+9.	public static void main(String[] args) {  
+10.	    Resource r=new ClassPathResource("applicationContext.xml");  
+11.	    BeanFactory factory=new XmlBeanFactory(r);  
+12.	      
+13.	    Question q=(Question)factory.getBean("q");  
+14.	    q.displayInfo();  
+15.	      
+16.	}  
+17.	}  
+
+
+Setter Injection with Map Example
+In this example, we are using map as the answer for a question that have answer as the key and username as the value. Here, we are using key and value pair both as a string.
+Like previous examples, it is the example of forum where one question can have multiple answers.
+Question.java
+This class contains three properties, getters & setters and displayInfo() method to display the information.
+1.	package com.javatpoint;  
+2.	import java.util.Iterator;  
+3.	import java.util.Map;  
+4.	import java.util.Set;  
+5.	import java.util.Map.Entry;  
+6.	  
+7.	public class Question {  
+8.	private int id;  
+9.	private String name;  
+10.	private Map<String,String> answers;  
+11.	  
+12.	//getters and setters  
+13.	  
+14.	public void displayInfo(){  
+15.	    System.out.println("question id:"+id);  
+16.	    System.out.println("question name:"+name);  
+17.	    System.out.println("Answers....");  
+18.	    Set<Entry<String, String>> set=answers.entrySet();  
+19.	    Iterator<Entry<String, String>> itr=set.iterator();  
+20.	    while(itr.hasNext()){  
+21.	        Entry<String,String> entry=itr.next();  
+22.	        System.out.println("Answer:"+entry.getKey()+" Posted By:"+entry.getValue());  
+23.	    }  
+24.	}  
+25.	}  
+applicationContext.xml
+The entry attribute of map is used to define the key and value information.
+1.	<?xml version="1.0" encoding="UTF-8"?>  
+2.	<beans  
+3.	    xmlns="http://www.springframework.org/schema/beans"  
+4.	    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"  
+5.	    xmlns:p="http://www.springframework.org/schema/p"  
+6.	    xsi:schemaLocation="http://www.springframework.org/schema/beans   
+7.	http://www.springframework.org/schema/beans/spring-beans-3.0.xsd">  
+8.	  
+9.	<bean id="q" class="com.javatpoint.Question">  
+10.	<property name="id" value="1"></property>  
+11.	<property name="name" value="What is Java?"></property>  
+12.	<property name="answers">  
+13.	<map>  
+14.	<entry key="Java is a programming language"  value="Sonoo Jaiswal"></entry>  
+15.	<entry key="Java is a Platform" value="Sachin Yadav"></entry>  
+16.	</map>  
+17.	</property>  
+18.	</bean>  
+19.	  
+20.	</beans>  
+Test.java
+This class gets the bean from the applicationContext.xml file and calls the displayInfo() method.
+1.	package com.javatpoint;  
+2.	  
+3.	import org.springframework.beans.factory.BeanFactory;  
+4.	import org.springframework.beans.factory.xml.XmlBeanFactory;  
+5.	import org.springframework.core.io.ClassPathResource;  
+6.	import org.springframework.core.io.Resource;  
+7.	  
+8.	public class Test {  
+9.	public static void main(String[] args) {  
+10.	    Resource r=new ClassPathResource("applicationContext.xml");  
+11.	    BeanFactory factory=new XmlBeanFactory(r);  
+12.	      
+13.	    Question q=(Question)factory.getBean("q");  
+14.	    q.displayInfo();  
+15.	      
+16.	}  
+17.	}  
+
+Setter Injkection with Non-String Map (having dependent object example)
+In this example, we are using map as the answer that have Answer and User. Here, we are using key and value pair both as an object. Answer has its own information such as answerId, answer and postedDate, User has its own information such as userId, username, emailId.
+Like previous examples, it is the example of forum where one question can have multiple answers.
+Question.java
+This class contains three properties, getters & setters and displayInfo() method to display the information.
+1.	package com.javatpoint;  
+2.	import java.util.Iterator;  
+3.	import java.util.Map;  
+4.	import java.util.Set;  
+5.	import java.util.Map.Entry;  
+6.	  
+7.	public class Question {  
+8.	private int id;  
+9.	private String name;  
+10.	private Map<Answer,User> answers;  
+11.	  
+12.	//getters and setters  
+13.	  
+14.	  
+15.	public void displayInfo(){  
+16.	    System.out.println("question id:"+id);  
+17.	    System.out.println("question name:"+name);  
+18.	    System.out.println("Answers....");  
+19.	    Set<Entry<Answer, User>> set=answers.entrySet();  
+20.	    Iterator<Entry<Answer, User>> itr=set.iterator();  
+21.	    while(itr.hasNext()){  
+22.	        Entry<Answer, User> entry=itr.next();  
+23.	        Answer ans=entry.getKey();  
+24.	        User user=entry.getValue();  
+25.	        System.out.println("Answer Information:");  
+26.	        System.out.println(ans);  
+27.	        System.out.println("Posted By:");  
+28.	        System.out.println(user);  
+29.	    }  
+30.	}  
+31.	}  
+Answer.java
+1.	package com.javatpoint;  
+2.	  
+3.	import java.util.Date;  
+4.	  
+5.	public class Answer {  
+6.	private int id;  
+7.	private String answer;  
+8.	private Date postedDate;  
+9.	public Answer() {}  
+10.	public Answer(int id, String answer, Date postedDate) {  
+11.	    super();  
+12.	    this.id = id;  
+13.	    this.answer = answer;  
+14.	    this.postedDate = postedDate;  
+15.	}  
+16.	  
+17.	public String toString(){  
+18.	    return "Id:"+id+" Answer:"+answer+" Posted Date:"+postedDate;  
+19.	}  
+20.	}  
+User.java
+1.	package com.javatpoint;  
+2.	  
+3.	public class User {  
+4.	private int id;  
+5.	private String name,email;  
+6.	public User() {}  
+7.	public User(int id, String name, String email) {  
+8.	    super();  
+9.	    this.id = id;  
+10.	    this.name = name;  
+11.	    this.email = email;  
+12.	}  
+13.	  
+14.	public String toString(){  
+15.	    return "Id:"+id+" Name:"+name+" Email Id:"+email;  
+16.	}  
+17.	}  
+applicationContext.xml
+The key-ref and value-ref attributes of entry element is used to define the reference of bean in the map.
+1.	<?xml version="1.0" encoding="UTF-8"?>  
+2.	<beans  
+3.	    xmlns="http://www.springframework.org/schema/beans"  
+4.	    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"  
+5.	    xmlns:p="http://www.springframework.org/schema/p"  
+6.	    xsi:schemaLocation="http://www.springframework.org/schema/beans   
+7.	http://www.springframework.org/schema/beans/spring-beans-3.0.xsd">  
+8.	  
+9.	<bean id="answer1" class="com.javatpoint.Answer">  
+10.	<property name="id" value="1"></property>  
+11.	<property name="answer" value="Java is a Programming Language"></property>  
+12.	<property name="postedDate" value="12/12/2001"></property>  
+13.	</bean>  
+14.	<bean id="answer2" class="com.javatpoint.Answer">  
+15.	<property name="id" value="2"></property>  
+16.	<property name="answer" value="Java is a Platform"></property>  
+17.	<property name="postedDate" value="12/12/2003"></property>  
+18.	</bean>  
+19.	  
+20.	<bean id="user1" class="com.javatpoint.User">  
+21.	<property name="id" value="1"></property>  
+22.	<property name="name" value="Arun Kumar"></property>  
+23.	<property name="email" value="arun@gmail.com"></property>  
+24.	</bean>  
+25.	<bean id="user2" class="com.javatpoint.User">  
+26.	<property name="id" value="2"></property>  
+27.	<property name="name" value="Varun Kumar"></property>  
+28.	<property name="email" value="Varun@gmail.com"></property>  
+29.	</bean>  
+30.	  
+31.	<bean id="q" class="com.javatpoint.Question">  
+32.	<property name="id" value="1"></property>  
+33.	<property name="name" value="What is Java?"></property>  
+34.	<property name="answers">  
+35.	<map>  
+36.	<entry key-ref="answer1" value-ref="user1"></entry>  
+37.	<entry key-ref="answer2" value-ref="user2"></entry>  
+38.	</map>  
+39.	</property>  
+40.	</bean>  
+41.	  
+42.	</beans>  
+Test.java
+This class gets the bean from the applicationContext.xml file and calls the displayInfo() method to display the information.
+1.	package com.javatpoint;  
+2.	  
+3.	import org.springframework.beans.factory.BeanFactory;  
+4.	import org.springframework.beans.factory.xml.XmlBeanFactory;  
+5.	import org.springframework.core.io.ClassPathResource;  
+6.	import org.springframework.core.io.Resource;  
+7.	  
+8.	public class Test {  
+9.	public static void main(String[] args) {  
+10.	    Resource r=new ClassPathResource("applicationContext.xml");  
+11.	    BeanFactory factory=new XmlBeanFactory(r);  
+12.	      
+13.	    Question q=(Question)factory.getBean("q");  
+14.	    q.displayInfo();  
+15.	      
+16.	}  
+17.	}  
+Difference between constructor and setter injection
+29 Aug 2024 | 1 min read
+1.	Difference between constructor and setter injection
+There are many key differences between constructor injection and setter injection.
+1.	Partial dependency: can be injected using setter injection but it is not possible by constructor. Suppose there are 3 properties in a class, having 3 arg constructor and setters methods. In such case, if you want to pass information for only one property, it is possible by setter method only.
+2.	Overriding: Setter injection overrides the constructor injection. If we use both constructor and setter injection, IOC container will use the setter injection.
+3.	Changes: We can easily change the value by setter injection. It doesn't create a new bean instance always like constructor. So setter injection is flexible than constructor injection.
+What is Field injection?
+Field injection means Spring injects depednencies directly into the fields (member variables) of a class – instead of using constructor or setter methods.
+
+Autowiring in Spring
+Autowiring feature of spring framework enables you to inject the object dependency implicitly. It internally uses setter or constructor injection.
+Autowiring can’t be used to inject primitive and string values. It works with reference only
+You use tbe @Autowired annotation directly on the field.
+
+Package com.javatpoint;
+
+Import org.springframework.beans.factory.annotation.Autowired;
+Import org.springframework.stereotype.Component;
+
+@Component
+public class Car {
+
+    // Field injection
+    @Autowired
+    private Engine engine;  // Spring will inject the Engine bean here
+
+    public void startCar() {
+        engine.start();
+        System.out.println("Car is running...");
+    }
+}
+
+And the dependency class:
+
+package com.javatpoint;
+
+import org.springframework.stereotype.Component;
+
+@Component
+public class Engine {
+    public void start() {
+        System.out.println("Engine started!");
+    }
+}
+
+How it works?
+When Spring scans your application:
+1.	It scans your classes for annoatations like @Component, @Service etc
+2.	It creates beans for them
+3.	It sees @Autowired and tries to match the required type (Engine) with an existing bean of the same typw in the context
+4.	It injects that bean into the field – even though the field is private
+
+3. XML Equivalent
+If you use XML configuration instead of annotations, the same thing would look like this:
+<bean id="engine" class="com.javatpoint.Engine"/>
+<bean id="car" class="com.javatpoint.Car">
+    <property name="engine" ref="engine"/>
+</bean>
+
+Concept	Explanation
+No setters/constructors required	Field injection directly sets the private field using reflection.
+Visibility doesn’t matter	Even if the field is private, Spring can inject it.
+Simpler but less testable	It’s quick to write, but harder to test since you can’t easily mock fields without reflection.
+Best practice	Prefer constructor injection in new code (it’s safer and supports immutability). Field injection is fine for simple or legacy cases.
+
+Injection Type	Example	Pros	Cons
+Field Injection	@Autowired private Engine engine;	Simple	Harder to test; reflection-based
+Setter Injection	@Autowired public void setEngine(Engine e){ this.engine = e; }	Mutable; flexible	Requires extra method
+Constructor Injection	@Autowired public Car(Engine e){ this.engine = e; }	Immutable, testable	Slightly more verbose
+
+
+
+Autowiring in Spring-
+Autowiring feature of Spring framework enables you to inject the object dependency implicitly. It internally uses setter or constructor injection.
+
+Autowiring can’t be used to inject primitive sand string values. It works with reference only/
+
+Advantages of Autowiring-
+It requires the less code because we don’t need to write the code to inject the dependency implicitly.
+
+Disadvantage of Autowiring-
+No control of programmer.
+It cant be used for primitive and string values
+
+Autowiring Modes
+There are many autowiring modes:
+No.	Mode	Description
+1)	no	It is the default autowiring mode. It means no autowiring bydefault.
+2)	byName	The byName mode injects the object dependency according to name of the bean. In such case, property name and bean name must be same. It internally calls setter method.
+3)	byType	The byType mode injects the object dependency according to type. So property name and bean name can be different. It internally calls setter method.
+4)	constructor	The constructor mode injects the dependency by calling the constructor of the class. It calls the constructor having large number of parameters.
+5)	autodetect	It is deprecated since Spring 3.
+
+Example of Autowiring
+Let's see the simple code to use autowiring in spring. You need to use autowire attribute of bean element to apply the autowire modes.
+1.	<bean id="a" class="org.sssit.A" autowire="byName"></bean>  
+Let's see the full example of autowiring in spring. To create this example, we have created 4 files.
+1.	B.java
+2.	A.java
+3.	applicationContext.xml
+4.	Test.java
+B.java
+This class contains a constructor and method only.
+1.	package org.sssit;  
+2.	public class B {  
+3.	B(){System.out.println("b is created");}  
+4.	void print(){System.out.println("hello b");}  
+5.	}  
+A.java
+This class contains reference of B class and constructor and method.
+1.	package org.sssit;  
+2.	public class A {  
+3.	B b;  
+4.	A(){System.out.println("a is created");}  
+5.	public B getB() {  
+6.	    return b;  
+7.	}  
+8.	public void setB(B b) {  
+9.	    this.b = b;  
+10.	}  
+11.	void print(){System.out.println("hello a");}  
+12.	void display(){  
+13.	    print();  
+14.	    b.print();  
+15.	}  
+16.	}  
+applicationContext.xml
+1.	<?xml version="1.0" encoding="UTF-8"?>  
+2.	<beans  
+3.	    xmlns="http://www.springframework.org/schema/beans"  
+4.	    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"  
+5.	    xmlns:p="http://www.springframework.org/schema/p"  
+6.	    xsi:schemaLocation="http://www.springframework.org/schema/beans   
+7.	http://www.springframework.org/schema/beans/spring-beans-3.0.xsd">  
+8.	  
+9.	<bean id="b" class="org.sssit.B"></bean>  
+10.	<bean id="a" class="org.sssit.A" autowire="byName"></bean>  
+11.	  
+12.	</beans>  
+Test.java
+This class gets the bean from the applicationContext.xml file and calls the display method.
+1.	package org.sssit;  
+2.	import org.springframework.context.ApplicationContext;  
+3.	import org.springframework.context.support.ClassPathXmlApplicationContext;  
+4.	public class Test {  
+5.	public static void main(String[] args) {  
+6.	    ApplicationContext context=new ClassPathXmlApplicationContext("applicationContext.xml");  
+7.	    A a=context.getBean("a",A.class);  
+8.	    a.display();  
+9.	}  
+10.	}  
+Output:
+b is created
+a is created
+hello a
+hello b
+________________________________________
+1) byName autowiring mode
+In case of byName autowiring mode, bean id and reference name must be same.
+It internally uses setter injection.
+1.	<bean id="b" class="org.sssit.B"></bean>  
+2.	<bean id="a" class="org.sssit.A" autowire="byName"></bean>  
+But, if you change the name of bean, it will not inject the dependency.
+Let's see the code where we are changing the name of the bean from b to b1.
+1.	<bean id="b1" class="org.sssit.B"></bean>  
+2.	<bean id="a" class="org.sssit.A" autowire="byName"></bean>  
+________________________________________
+2) byType autowiring mode
+In case of byType autowiring mode, bean id and reference name may be different. But there must be only one bean of a type.
+It internally uses setter injection.
+1.	<bean id="b1" class="org.sssit.B"></bean>  
+2.	<bean id="a" class="org.sssit.A" autowire="byType"></bean>  
+In this case, it works fine because you have created an instance of B type. It doesn't matter that you have different bean name than reference name.
+But, if you have multiple bean of one type, it will not work and throw exception.
+Let's see the code where are many bean of type B.
+1.	<bean id="b1" class="org.sssit.B"></bean>  
+2.	<bean id="b2" class="org.sssit.B"></bean>  
+3.	<bean id="a" class="org.sssit.A" autowire="byName"></bean>  
+In such case, it will throw exception.
+________________________________________
+3) constructor autowiring mode
+In case of constructor autowiring mode, spring container injects the dependency by highest parameterized constructor.
+If you have 3 constructors in a class, zero-arg, one-arg and two-arg then injection will be performed by calling the two-arg constructor.
+1.	<bean id="b" class="org.sssit.B"></bean>  
+2.	<bean id="a" class="org.sssit.A" autowire="constructor"></bean>  
+________________________________________
+4) no autowiring mode
+In case of no autowiring mode, spring container doesn't inject the dependency by autowiring.
+1.	<bean id="b" class="org.sssit.B"></bean>  
+2.	<bean id="a" class="org.sssit.A" autowire="no"></bean>  
+Dependency Injection with Factory Method in Spring-
+Spring framework provides facility to inject bean using factory method. To do so, we can use two attributes of bean element.
+1.	Factory method: represents the factory method that will be invoked to inject the bvean
+2.	Factory-beam: represents the reference of the bean by which factory method will be invoked. It is used if factory method is non-static.
+
+A method that return instance of the called factory method.
+
+Public class A {
+Publc static A getA(){
+Return new A();
+}
+}
+
+Factory method types:
+There can be three types of factory method:
+1.	A static factory method that returns instance of its own class. It is used in singleton design pattern.
+<bean id="a" class="com.javatpoint.A" factory-method="getA"></bean>  
+
+2.A static factory method that return instance of another class. Its used instance is not known and decided at runtme.
+<bean id = “b” class = “com.javatpoint.A” factory-method = “getrB”></bean>
+3.	A non static factory method that returns instance of another class. Its used instance is not known and is decided at runtime.
+<bean id = “a” class = “com.javatpoint.A”></bean>
+<bean id = “b” class = “com.javatpoint.A” factory-method = “getB” factory-bean = “a”></bean>
+
+👉 Factory methods are used only in special situations — when you can’t create the object directly through CI or SI.
+Let’s break it down clearly 👇
+________________________________________
+🧩 1. What CI and SI normally do
+With constructor or setter injection, Spring creates your beans by calling a public constructor or a setter method.
+Example:
+<bean id="a" class="com.javatpoint.A"/>
+<bean id="b" class="com.javatpoint.B">
+    <constructor-arg ref="a"/>
+</bean>
+➡️ This works when:
+•	The class has a public constructor.
+•	You can directly instantiate it with new.
+________________________________________
+⚙️ 2. Why Factory Methods Exist
+Now suppose:
+•	The constructor is private, or
+•	The object is not created with new but through some static or dynamic logic (for example, based on configuration, environment, or runtime condition).
+In such cases, Spring cannot create the bean directly.
+That’s when you need a factory method — a method that returns an object.
+________________________________________
+⚠️ Example: Private Constructor (Singleton or Controlled Creation)
+public class A {
+    private static final A obj = new A();
+    private A() {}
+    public static A getA() {
+        return obj;
+    }
+}
+➡️ Spring cannot call the constructor directly because it’s private.
+So you tell Spring:
+<bean id="a" class="com.javatpoint.A" factory-method="getA"/>
+✅ Now Spring calls A.getA() to obtain the instance.
+________________________________________
+🧠 3. When Instance Type Is Decided at Runtime
+Sometimes you want to decide which class to instantiate at runtime:
+
+public class PrintableFactory {
+    public static Printable getPrintable() {
+        if (System.currentTimeMillis() % 2 == 0)
+            return new A();
+        else
+            return new B();
+    }
+}
+➡️ You can’t define that in XML CI/SI, because you don’t know in advance whether it will be A or B.
+Factory method gives you dynamic decision power:
+<bean id="p" class="com.javatpoint.PrintableFactory" factory-method="getPrintable"/>
+🏭 4. Non-static Factory Method
+Used when the factory itself is a bean (for example, Spring-managed component that produces others).
+<bean id="pfactory" class="com.javatpoint.PrintableFactory"/>
+<bean id="p" factory-bean="pfactory" factory-method="getPrintable"/>
+This pattern is similar to how Spring itself manages internal beans like SessionFactory, EntityManagerFactory, etc.
+________________________________________
+🔍 TL;DR — Why Not Just CI or SI?
+Use Case	CI/SI Works?	Factory Method Needed?
+Normal bean with public constructor	✅ Yes	❌ No
+Private constructor (Singleton, restricted instantiation)	❌ No	✅ Yes
+Object creation logic (runtime decision, caching, etc.)	❌ No	✅ Yes
+You don’t control the class (3rd-party library)	❌ No	✅ Yes
+You want a managed factory bean that produces others	⚠️ Partial	✅ Yes
+⚡ In Simple Terms
+🗣️ CI/SI = "Spring, create the object by calling its constructor."
+🗣️ Factory method = "Spring, call this method to get me the object — because you can’t or shouldn’t create it directly."
+________________________________________
+If you’re just creating your own plain beans → CI/SI is perfectly fine.
+Factory methods are mainly used for:
+•	Singleton pattern
+•	Runtime class selection
+•	Integrating legacy / third-party code
+•	Framework-level object creation
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
