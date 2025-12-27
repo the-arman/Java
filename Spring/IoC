@@ -1,6 +1,6 @@
 What is IoC(Inversion of Control)?
 It is a design principle in which the control of object creation and dependency management is inverted from the programmer to a container(Spring Framework)
- 
+  
 In normal Java,     
 Car car = new Car()
 
